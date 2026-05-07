@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Панель ученика{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Переносим сюда специфичные стили для этой страницы */
+    .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .lesson-card { border-left: 5px solid #10b981; background: #f0fdf4; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+    .timer { font-weight: bold; color: #ef4444; }
+    .topic-link { display: block; padding: 12px; background: #f8fafc; margin-bottom: 8px; border-radius: 8px; text-decoration: none; color: #1e293b; border: 1px solid #e2e8f0; transition: all 0.2s; }
+    .topic-link:hover { background: #f1f5f9; border-color: #4f46e5; transform: translateX(5px); }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>Привет, {{ request.user.first_name }}! 👋</h1>
+        <div class="card" style="margin-bottom: 0; padding: 10px 20px;">
+            Следующий урок: <span class="timer">{% if lessons.0 %}{{ lessons.0.countdown_text }}{% else %}не назначен{% endif %}</span>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
+        <!-- Левая колонка: Расписание -->
+        <div class="card">
+            <h2>📅 Мое расписание</h2>
+            {% for lesson in lessons %}
+                <div class="lesson-card">
+                    <strong>{{ lesson.start_time|date:"d M, H:i" }}</strong> — {{ lesson.topic.name|default:"Разбор вопросов" }}
+                    <br>
+                    {% if lesson.material_link %}
+                        <a href="{{ lesson.material_link }}" target="_blank" style="font-size: 0.9rem; color: #4f46e5;">📖 Материалы к уроку</a>
+                    {% endif %}
+                    {% if lesson.homework %}
+                        <p style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
+                            📝 <strong>ДЗ:</strong> {{ lesson.homework.description }} 
+                            {% if lesson.homework.is_completed %} 
+                                <span style="color: #10b981;">(Выполнено ✅)</span> 
+                            {% else %} 
+                                <span style="color: #f59e0b;">(В работе ⏳)</span> 
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p>Уроков пока нет.</p>
+            {% endfor %}
+        </div>
+
+        <!-- Правая колонка: Тренажер -->
+        <div class="card">
+            <h2>🧠 Тренажер по темам</h2>
+            <p style="color: #64748b; margin-bottom: 15px;">Выбери тему для практики:</p>
+            {% for topic in topics %}
+                <a href="{% url 'trainer_task' topic.id %}" class="topic-link">
+                    {{ topic.name }}
+                </a>
+            {% empty %}
+                <p>Темы пока не добавлены.</p>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

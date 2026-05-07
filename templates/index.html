@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .hero {
+        text-align: center;
+        padding: 6rem 0 4rem;
+    }
+    .hero h1 {
+        font-size: 4rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #4f46e5, #9333ea);
+        background-clip: text; /* Стандарт */
+        -webkit-background-clip: text; /* Для Chrome/Safari */
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1.5rem;
+    }
+    .hero p {
+        font-size: 1.4rem;
+        color: #64748b;
+        max-width: 700px;
+        margin: 0 auto 2.5rem;
+    }
+    
+    .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 4rem;
+    }
+    .feature-card {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        transition: transform 0.3s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
+    }
+    .icon-box {
+        width: 50px;
+        height: 50px;
+        background: #f5f3ff;
+        color: #4f46e5;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="hero">
+    <h1>Математика и IT <br>на одной платформе</h1>
+    <p>Твой персональный путь к высоким баллам ЕГЭ и ОГЭ с умными тренажерами и личным наставником.</p>
+    {% if not user.is_authenticated %}
+        <a href="{% url 'login' %}" class="btn-main" style="padding: 1.2rem 2.5rem; font-size: 1.2rem;">Начать обучение</a>
+    {% else %}
+        <a href="{% url 'dashboard' %}" class="btn-main">Вернуться в кабинет</a>
+    {% endif %}
+</div>
+
+<div class="features">
+    <div class="feature-card">
+        <div class="icon-box"><i data-lucide="calendar"></i></div>
+        <h3>Умное расписание</h3>
+        <p>Следи за занятиями, отмечай посещаемость и никогда не пропускай важные уроки.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon-box"><i data-lucide="brain-circuit"></i></div>
+        <h3>Тренажер ЕГЭ</h3>
+        <p>Сотни задач по математике и информатике с мгновенной проверкой и подробным разбором.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon-box"><i data-lucide="file-text"></i></div>
+        <h3>Все в одном месте</h3>
+        <p>Методички, конспекты и домашние задания доступны 24/7 в твоем личном кабинете.</p>
+    </div>
+</div>
+
+<section style="margin-top: 8rem;">
+    <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 3rem;">Твой путь к результату</h2>
+    <div style="display: flex; justify-content: space-between; gap: 20px; counter-reset: step;">
+        <div style="flex: 1; text-align: center; position: relative;">
+            <div style="width: 40px; height: 40px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-weight: bold;">1</div>
+            <h4>Пробный урок</h4>
+            <p style="color: #64748b; font-size: 0.9rem;">Определяем уровень знаний и ставим цели на обучение.</p>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <div style="width: 40px; height: 40px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-weight: bold;">2</div>
+            <h4>Индивидуальный план</h4>
+            <p style="color: #64748b; font-size: 0.9rem;">Составляем расписание и подбираем темы для глубокой проработки.</p>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <div style="width: 40px; height: 40px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-weight: bold;">3</div>
+            <h4>Практика и контроль</h4>
+            <p style="color: #64748b; font-size: 0.9rem;">Решаем задачи в тренажере и следим за прогрессом в ЛК.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Блок: О преподавателе -->
+<section style="margin-top: 8rem; background: #1e293b; color: white; padding: 60px; border-radius: 30px; display: flex; align-items: center; gap: 50px;">
+    <div style="flex: 1;">
+        <h2 style="font-size: 2.5rem; margin-bottom: 20px;">Давай знакомиться</h2>
+        <p style="font-size: 1.1rem; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;">
+            Меня зовут **Артур**, я помогаю ученикам влюбиться в математику и информатику. 
+            Моя задача — не просто подготовить к экзамену, а научить думать и находить красивые решения сложных задач.
+        </p>
+        <ul style="list-style: none; padding: 0; color: #cbd5e1;">
+            <li style="margin-bottom: 10px;">✅ Опыт преподавания более 5 лет</li>
+            <li style="margin-bottom: 10px;">✅ Собственная методика подготовки к ЕГЭ</li>
+            <li style="margin-bottom: 10px;">✅ Средний балл учеников — 85+</li>
+        </ul>
+    </div>
+    <div style="flex: 1; text-align: center;">
+        <!-- Здесь будет твое фото -->
+        <div style="width: 300px; height: 400px; background: #334155; border-radius: 20px; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+             <i data-lucide="user" size="100" style="color: #475569;"></i>
+        </div>
+    </div>
+</section>
+{% endblock %}

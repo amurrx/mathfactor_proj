@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Расписание | MathFactor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card { background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 24px; }
+    
+    /* Ближайший урок */
+    .next-lesson-hero {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 20px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .next-lesson-hero .timer-big {
+        font-size: 1.2rem;
+        background: rgba(255,255,255,0.2);
+        padding: 8px 16px;
+        border-radius: 10px;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    /* Разделитель дней */
+    .day-separator {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin: 30px 0 15px 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .day-separator::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
+
+    /* Компактный урок в списке */
+    .lesson-compact {
+        background: white;
+        padding: 16px 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    .lesson-compact:hover { border-color: #4f46e5; transform: translateX(5px); }
+    
+    .time-badge { font-weight: 700; font-size: 1.1rem; color: #1e293b; min-width: 70px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 40px;">
+    
+    <section>
+        <!-- БЛИЖАЙШИЙ УРОК -->
+        {% if next_lesson %}
+            <h2 style="margin-bottom: 20px;">Ближайшее занятие</h2>
+            <div class="next-lesson-hero">
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px;">СЕГОДНЯ, {{ next_lesson.start_time|date:"H:i" }}</div>
+                <h1 style="margin: 0; color: white;">{{ next_lesson.student.get_full_name }}</h1>
+                <div style="font-size: 1.1rem; opacity: 0.9; margin-top: 5px;">Тема: {{ next_lesson.topic.name|default:"Разбор вопросов" }}</div>
+                <div class="timer-big">
+                    <i data-lucide="clock" size="18" style="vertical-align: middle;"></i> 
+                    До начала: {{ next_lesson.countdown_text }}
+                </div>
+                <i data-lucide="graduation-cap" style="position: absolute; right: -20px; bottom: -20px; width: 150px; height: 150px; opacity: 0.1; color: white;"></i>
+            </div>
+        {% endif %}
+
+        <!-- ОСТАЛЬНОЕ РАСПИСАНИЕ -->
+        <h2 style="margin-bottom: 20px;">Предстоящие уроки</h2>
+        
+        {% if other_lessons %}
+            {% for lesson in other_lessons %}
+                <!-- Группировка по дням (магия Django template tag 'ifchanged') -->
+                {% ifchanged lesson.start_time.date %}
+                    <div class="day-separator">
+                        {{ lesson.start_time|date:"d E, l" }}
+                    </div>
+                {% endifchanged %}
+
+                <div class="lesson-compact">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div class="time-badge">{{ lesson.start_time|date:"H:i" }}</div>
+                        <div>
+                            <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
+                            <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name|default:"Тема не указана" }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'student_detail' lesson.student.id %}" style="color: #4f46e5; text-decoration: none; font-size: 0.9rem; font-weight: 600;">Детали →</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            {% if not next_lesson %}
+                <div class="card" style="text-align: center; color: #64748b;">
+                    <i data-lucide="calendar-x" size="40" style="margin-bottom: 10px;"></i>
+                    <p>На ближайшее время уроков нет.</p>
+                </div>
+            {% endif %}
+        {% endif %}
+    </section>
+
+    <!-- ПРАВАЯ ПАНЕЛЬ С УЧЕНИКАМИ -->
+    <aside>
+        <div class="card">
+            <h2 style="margin-top:0; margin-bottom:20px; font-size: 1.2rem;">Мои ученики</h2>
+            {% for student in students %}
+                <a href="{% url 'student_detail' student.id %}" class="student-card" style="display: flex; align-items: center; padding: 12px; text-decoration: none; color: inherit; border-radius: 12px; transition: background 0.2s;">
+                    <div style="width: 36px; height: 36px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; font-size: 0.8rem;">
+                        {{ student.first_name|slice:":1" }}
+                    </div>
+                    <span style="font-weight: 500;">{{ student.get_full_name }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

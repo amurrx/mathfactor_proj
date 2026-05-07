@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MathFactor{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --white: #ffffff;
+            --gray: #64748b;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            line-height: 1.5;
+        }
+        /* Шапка и меню */
+        nav {
+            background: var(--white);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.025em;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--gray);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--primary); }
+        .btn-logout {
+            background: #fee2e2;
+            color: #ef4444 !important;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+        .btn-logout:hover { background: #fecaca; }
+
+        @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+        }
+        .container { animation: fadeIn 0.5s ease-out; }
+        
+        /* Стили навигации */
+        nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px); /* Эффект матового стекла */
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .logo-container { display: flex; align-items: center; gap: 8px; }
+
+        /* Контейнер */
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Футер */
+        footer {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<nav>
+    <a href="/" class="logo-container" style="text-decoration: none;">
+        <i data-lucide="calculator" style="color: #4f46e5;"></i>
+        <span class="logo">MathFactor.</span>
+    </a>
+    <div class="nav-links">
+        {% if user.is_authenticated %}
+            
+            <!-- Общая ссылка, но с разным текстом в зависимости от роли -->
+            <a href="{% url 'dashboard' %}" style="display: flex; align-items: center; gap: 5px;">
+                {% if user.role == 'TEACHER' %}
+                    <i data-lucide="users" size="18"></i> Мои ученики
+                {% else %}
+                    <i data-lucide="book-open" size="18"></i> Моё обучение
+                {% endif %}
+            </a>
+
+            <!-- Дополнительная ссылка только для учителя -->
+            {% if user.role == 'TEACHER' %}
+                <a href="/admin/" style="display: flex; align-items: center; gap: 5px;">
+                    <i data-lucide="settings" size="18"></i> Управление
+                </a>
+            {% endif %}
+
+            <!-- Кнопка выхода (теперь через форму, чтобы не было ошибки 405) -->
+            <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout" style="border: none; background: none; cursor: pointer; font-family: inherit; font-size: inherit; display: flex; align-items: center; gap: 5px;">
+                    <i data-lucide="log-out" size="18"></i> Выход
+                </button>
+            </form>
+
+        {% else %}
+            <a href="{% url 'login' %}" class="btn-main" style="padding: 0.5rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Вход</a>
+        {% endif %}
+    </div>
+</nav>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+<footer>
+    &copy; 2026 MathFactor. Платформа для обучения математике и информатике.
+</footer>
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>

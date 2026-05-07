@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Вход | MathFactor{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 70vh;">
+    <div style="background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px;">
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="width: 60px; height: 60px; background: #f5f3ff; color: #4f46e5; border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                <i data-lucide="lock" size="30"></i>
+            </div>
+            <h2 style="margin: 0; font-size: 1.5rem;">Добро пожаловать</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 5px;">Войдите в свой личный кабинет</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div style="background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem;">
+                    Неверный логин или пароль. Попробуйте еще раз.
+                </div>
+            {% endif %}
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 500;">Логин</label>
+                <input type="text" name="username" required 
+                       style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 500;">Пароль</label>
+                <input type="password" name="password" required 
+                       style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" class="btn-main" style="width: 100%; border: none; padding: 14px; font-size: 1rem; cursor: pointer;">
+                Войти в систему
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <p style="font-size: 0.85rem; color: #94a3b8;">Нет аккаунта? <br> Обратитесь к вашему преподавателю.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
