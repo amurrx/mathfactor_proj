@@ -1,6 +1,7 @@
 import random
 from django.shortcuts import render
 from django.contrib.auth import logout
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
@@ -22,16 +23,17 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     # Получаем уроки текущего пользователя (и как учителя, и как ученика)
-    if request.user.role == 'TEACHER':
+    if request.user.is_teacher:
             now = timezone.now()
             # Получаем все будущие уроки учителя
-            all_upcoming = Lesson.objects.filter(
+            all_upcoming = Lesson.objects.select_related('student', 'topic').filter(
                 teacher=request.user, 
-                start_time__gte=now - timezone.timedelta(minutes=60) # Показываем уроки, которые начались не более часа назад
+                start_time__gte=now - timezone.timedelta(minutes=60)
             ).order_by('start_time')
 
-            next_lesson = all_upcoming.first() # Самый ближайший
-            other_lessons = all_upcoming[1:] if all_upcoming.count() > 1 else [] # Все остальные
+            all_upcoming = list(all_upcoming) # Превращаем QuerySet в список, если данных немного
+            next_lesson = all_upcoming[0] if all_upcoming else None
+            other_lessons = all_upcoming[1:]
 
             student_ids = Lesson.objects.filter(teacher=request.user).values_list('student_id', flat=True).distinct()
             students = User.objects.filter(id__in=student_ids)
@@ -53,8 +55,8 @@ def dashboard(request):
 
 @login_required
 def student_detail(request, student_id):
-    if request.user.role != 'TEACHER':
-        return render(request, '403.html') # Ограничение доступа
+    if not request.user.is_teacher:
+        raise PermissionDenied # Ограничение доступа
 
     student = get_object_or_404(User, id=student_id)
     # Все уроки этого ученика с текущим учителем
@@ -85,9 +87,9 @@ def student_detail(request, student_id):
 
 @login_required
 def update_lesson_status(request, lesson_id, status):
-    if request.user.role != 'TEACHER':
-        return render(request, '403.html')
-    
+    if not request.user.is_teacher:
+        raise PermissionDenied # Ограничение доступа
+
     lesson = get_object_or_404(Lesson, id=lesson_id, teacher=request.user)
     lesson.status = status
     lesson.save()
@@ -97,9 +99,9 @@ def update_lesson_status(request, lesson_id, status):
 
 @login_required
 def toggle_homework(request, homework_id):
-    if request.user.role != 'TEACHER':
-        return render(request, '403.html')
-    
+    if not request.user.is_teacher:
+        raise PermissionDenied # Ограничение доступа
+
     homework = get_object_or_404(Homework, id=homework_id, lesson__teacher=request.user)
     homework.is_completed = not homework.is_completed # Переключаем статус
     homework.save()
@@ -131,7 +133,7 @@ def trainer_task(request, topic_id):
         if not tasks.exists():
             return render(request, 'platform_app/no_tasks.html', {'topic': topic})
         
-        task = random.choice(tasks)
+        task = tasks.order_by('?').first()
         return render(request, 'platform_app/trainer_task.html', {
             'topic': topic,
             'task': task,

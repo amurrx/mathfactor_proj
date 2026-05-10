@@ -22,6 +22,11 @@ class Task(models.Model):
 
 class Lesson(models.Model):
     """Расписание занятий"""
+    class Meta:
+        verbose_name = "Урок"
+        verbose_name_plural = "Уроки"
+        ordering = ['-start_time']
+        
     class Status(models.TextChoices):
         PLANNED = 'PLANNED', 'Запланировано'
         COMPLETED = 'COMPLETED', 'Проведено'
@@ -32,14 +37,14 @@ class Lesson(models.Model):
         User, 
         on_delete=models.CASCADE, 
         related_name='lessons_teacher',
-        limit_choices_to={'role': 'TEACHER'}, # Добавляем этот фильтр
+        limit_choices_to={'role': User.TEACHER}, # Добавляем этот фильтр
         verbose_name="Учитель"
     )
     student = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
         related_name='lessons_student',
-        limit_choices_to={'role': 'STUDENT'}, # И этот тоже
+        limit_choices_to={'role': User.STUDENT}, # И этот тоже
         verbose_name="Ученик"
     )
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
@@ -51,8 +56,8 @@ class Lesson(models.Model):
     def countdown_text(self):
         """Логика таймера: 3м 32с -> 3 мин"""
         now = timezone.now()
-        if self.start_time <= now:
-            return "Идет или завершено"
+        if self.status == self.Status.CANCELLED:
+            return "Отменено"
         
         diff = self.start_time - now
         total_seconds = int(diff.total_seconds())
@@ -65,7 +70,7 @@ class Lesson(models.Model):
             return f"{days} дн. {hours} ч."
         if hours > 0:
             return f"{hours} ч. {minutes} мин."
-        return f"{minutes} мин." # Округляет вниз, как ты и просил
+        return f"{minutes} мин." # Округляет вниз, 
 
     def __str__(self):
         return f"{self.student.last_name} - {self.start_time.strftime('%d.%m %H:%M')}"
