@@ -15,14 +15,12 @@ import os
 from dotenv import load_dotenv
 
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path)
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+dotenv_path = BASE_DIR / '.env'
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -40,6 +38,10 @@ LOGOUT_REDIRECT_URL = 'index'
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",  # Должно быть ПЕРВЫМ
+    "unfold.contrib.filters",  # Опционально: улучшенные фильтры
+    "unfold.contrib.forms",    # Опционально: улучшенные формы
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +51,31 @@ INSTALLED_APPS = [
     'users',
     'platform_app',
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "MathFactor Admin",
+    "SITE_HEADER": "MathFactor Admin",
+    "SITE_SYMBOL": "MF", # Иконка из Lucide
+    "COLORS": {
+        "primary": {
+            "50": "250 245 255",
+            "100": "243 232 255",
+            "200": "233 213 255",
+            "300": "216 180 254",
+            "400": "192 132 252",
+            "500": "79 70 229",  # Твой основной --primary (#4f46e5)
+            "600": "67 56 202",
+            "700": "55 48 163",
+            "800": "46 40 135",
+            "900": "38 34 114",
+            "950": "23 21 70",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+    },
+}
 
 AUTH_USER_MODEL = 'users.User'
 

@@ -35,13 +35,9 @@ def dashboard(request):
             next_lesson = all_upcoming[0] if all_upcoming else None
             other_lessons = all_upcoming[1:]
 
-            student_ids = Lesson.objects.filter(teacher=request.user).values_list('student_id', flat=True).distinct()
-            students = User.objects.filter(id__in=student_ids)
-
             return render(request, 'platform_app/teacher_dashboard.html', {
                 'next_lesson': next_lesson,
                 'other_lessons': other_lessons,
-                'students': students
             })
     else:
          # Логика для ученика
@@ -54,6 +50,26 @@ def dashboard(request):
         })
 
 @login_required
+def student_list(request):
+    if not request.user.is_teacher:
+        raise PermissionDenied
+
+    query = request.GET.get('q', '') # Получаем поисковый запрос
+    
+    # Находим всех уникальных учеников этого учителя
+    student_ids = Lesson.objects.filter(teacher=request.user).values_list('student_id', flat=True).distinct()
+    students = User.objects.filter(id__in=student_ids)
+
+    if query:
+        students = students.filter(last_name__icontains=query) # Поиск по фамилии
+
+    return render(request, 'platform_app/student_list.html', {
+        'students': students,
+        'query': query
+    })
+
+
+@login_required
 def student_detail(request, student_id):
     if not request.user.is_teacher:
         raise PermissionDenied # Ограничение доступа
@@ -61,16 +77,16 @@ def student_detail(request, student_id):
     student = get_object_or_404(User, id=student_id)
     # Все уроки этого ученика с текущим учителем
     lessons = Lesson.objects.filter(student=student, teacher=request.user).order_by('-start_time')
-    
+    homeworks = Homework.objects.filter(lesson__student=student, lesson__teacher=request.user)
     # Статистика
     total_lessons = lessons.count()
-    completed_lessons = lessons.filter(status='COMPLETED').count()
-    missed_lessons = lessons.filter(status='MISSED').count()
+    # Используем класс статусов из модели для надежности
+    completed_homeworks = homeworks.filter(status=Homework.Status.DONE).count()
+    completed_lessons = lessons.filter(status=Lesson.Status.COMPLETED).count()
+    missed_lessons = lessons.filter(status=Lesson.Status.MISSED).count()
     
     # Считаем выполненные ДЗ
     # Собираем все ДЗ, привязанные к урокам этого ученика
-    homeworks = Homework.objects.filter(lesson__student=student, lesson__teacher=request.user)
-    completed_homeworks = homeworks.filter(is_completed=True).count()
 
     context = {
         'student': student,
@@ -103,7 +119,12 @@ def toggle_homework(request, homework_id):
         raise PermissionDenied # Ограничение доступа
 
     homework = get_object_or_404(Homework, id=homework_id, lesson__teacher=request.user)
-    homework.is_completed = not homework.is_completed # Переключаем статус
+
+    if homework.status == Homework.Status.DONE:
+        homework.status = Homework.Status.TODO
+    else:
+        homework.status = Homework.Status.DONE
+
     homework.save()
     
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))

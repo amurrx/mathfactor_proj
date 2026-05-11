@@ -55,11 +55,51 @@
             transition: color 0.2s;
         }
         .nav-links a:hover { color: var(--primary); }
+        /* Основная кнопка */
+        .btn-main {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-main:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        /* Адаптивность для сетки */
+        @media (max-width: 768px) {
+            .features {
+                grid-template-columns: 1fr; /* На мобилках карточки в один ряд */
+            }
+            .hero h1 {
+                font-size: 2.5rem; /* Уменьшаем заголовок на мобилках */
+            }
+            section[style*="display: flex"] {
+                flex-direction: column; /* Секция знакомства тоже в один столбец */
+            }
+        }
         .btn-logout {
-            background: #fee2e2;
+            background: none;
             color: #ef4444 !important;
             padding: 0.5rem 1rem;
             border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
         }
         .btn-logout:hover { background: #fecaca; }
 
@@ -83,6 +123,21 @@
             margin: 2rem auto;
             padding: 0 1rem;
         }
+        .alert {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+        /* Стили для ошибок */
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        /* Стили по умолчанию (info/success) */
+        .alert-info, .alert-success, .alert-default {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
 
         /* Футер */
         footer {
@@ -104,31 +159,20 @@
     </a>
     <div class="nav-links">
         {% if user.is_authenticated %}
-            
-            <!-- Общая ссылка, но с разным текстом в зависимости от роли -->
-            <a href="{% url 'dashboard' %}" style="display: flex; align-items: center; gap: 5px;">
-                {% if user.role == 'TEACHER' %}
-                    <i data-lucide="users" size="18"></i> Мои ученики
-                {% else %}
-                    <i data-lucide="book-open" size="18"></i> Моё обучение
-                {% endif %}
-            </a>
-
-            <!-- Дополнительная ссылка только для учителя -->
-            {% if user.role == 'TEACHER' %}
-                <a href="/admin/" style="display: flex; align-items: center; gap: 5px;">
-                    <i data-lucide="settings" size="18"></i> Управление
-                </a>
+            {% if user.is_teacher %}
+                <a href="{% url 'dashboard' %}"><i data-lucide="calendar"></i> Расписание</a>
+                <a href="{% url 'student_list' %}"><i data-lucide="users"></i> Ученики</a>
+                <a href="/admin/"><i data-lucide="settings"></i> Управление</a>
+            {% else %}
+                <a href="{% url 'dashboard' %}"><i data-lucide="book-open"></i> Моё обучение</a>
             {% endif %}
-
             <!-- Кнопка выхода (теперь через форму, чтобы не было ошибки 405) -->
             <form action="{% url 'logout' %}" method="post" style="display: inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn-logout" style="border: none; background: none; cursor: pointer; font-family: inherit; font-size: inherit; display: flex; align-items: center; gap: 5px;">
+                <button type="submit" class="btn-logout" style="border: none; cursor: pointer; font-family: inherit; font-size: inherit; display: flex; align-items: center; gap: 5px;">
                     <i data-lucide="log-out" size="18"></i> Выход
                 </button>
             </form>
-
         {% else %}
             <a href="{% url 'login' %}" class="btn-main" style="padding: 0.5rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Вход</a>
         {% endif %}
@@ -136,11 +180,20 @@
 </nav>
 
 <div class="container">
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
     {% block content %}{% endblock %}
 </div>
 
 <footer>
-    &copy; 2026 MathFactor. Платформа для обучения математике и информатике.
+    &copy; {% now "Y" %} MathFactor. Платформа для обучения математике и информатике.
 </footer>
 <script>
   lucide.createIcons();

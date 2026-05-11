@@ -17,22 +17,19 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.views import LogoutView
-from django.urls import path
-from platform_app.views import dashboard
+from django.urls import path, include
 from platform_app.views import dashboard, student_detail, update_lesson_status, toggle_homework, trainer_task, index, logout_view 
 
+admin.site.site_header = "MathFactor Панель Управления"
+admin.site.site_title = "Админка MathFactor"
+admin.site.index_title = "Добро пожаловать, Артур"
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', index, name='index'),
-    path('dashboard/', dashboard, name='dashboard'),
-
-    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
-    path('logout/', logout_view, name='logout'),
+    # Все запросы, которые начинаются не с admin/, 
+    # Django отправит в файл urls.py внутри приложения platform_app
+    path('', include('platform_app.urls')), 
     
-    path('student/<int:student_id>/', student_detail, name='student_detail'),
-    path('lesson/<int:lesson_id>/status/<str:status>/', update_lesson_status, name='update_lesson_status'),
-    path('homework/<int:homework_id>/toggle/', toggle_homework, name='toggle_homework'),
-    path('trainer/<int:topic_id>/', trainer_task, name='trainer_task'),
-    # path('logout/', LogoutView.as_view(next_page='dashboard'), name='logout'),
+    # Если у тебя есть авторизация в приложении users, добавь и его
+    path('auth/', include('django.contrib.auth.urls')),
 ]

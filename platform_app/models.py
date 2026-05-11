@@ -50,17 +50,19 @@ class Lesson(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
     start_time = models.DateTimeField(verbose_name="Время начала")
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.PLANNED)
-    material_link = models.URLField(blank=True, verbose_name="Ссылка на материалы")
+    material_link = models.FileField(blank=True, verbose_name="Ссылка на материалы")
 
     @property
     def countdown_text(self):
-        """Логика таймера: 3м 32с -> 3 мин"""
         now = timezone.now()
-        if self.status == self.Status.CANCELLED:
-            return "Отменено"
-        
+        if self.status != self.Status.PLANNED:
+            return self.get_status_display() # Возвращает "Проведено", "Отменено" и т.д.
+
         diff = self.start_time - now
         total_seconds = int(diff.total_seconds())
+
+        if total_seconds <= 0:
+            return "Идет сейчас" if total_seconds > -3600 else "Завершен" # Условно 1 час на урок
         
         days = total_seconds // 86400
         hours = (total_seconds % 86400) // 3600
@@ -75,12 +77,32 @@ class Lesson(models.Model):
     def __str__(self):
         return f"{self.student.last_name} - {self.start_time.strftime('%d.%m %H:%M')}"
 
+
 class Homework(models.Model):
     """Домашняя работа, привязанная к уроку"""
-    lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='homework')
+    
+    class Status(models.TextChoices):
+        TODO = 'TODO', 'Не начато'
+        REVIEW = 'REVIEW', 'На проверке'
+        FIXING = 'FIXING', 'Требует исправления'
+        DONE = 'DONE', 'Выполнено'
+
+    lesson = models.OneToOneField(
+        'Lesson', 
+        on_delete=models.CASCADE, 
+        related_name='homework'
+    )
+    
     description = models.TextField(verbose_name="Что сделать")
-    is_completed = models.BooleanField(default=False, verbose_name="Выполнено")
+
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.TODO,
+        verbose_name="Статус"
+    )
+    
     report = models.TextField(blank=True, verbose_name="Отчет ученика/ссылка")
 
     def __str__(self):
-        return f"ДЗ к уроку {self.lesson.id}"
+        return f"ДЗ к уроку {self.lesson.id} [{self.get_status_display()}]"

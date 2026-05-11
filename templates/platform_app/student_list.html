@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои ученики | MathFactor{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <h1>Мои ученики</h1>
+    <form method="get" style="display: flex; gap: 10px;">
+        <input type="text" name="q" value="{{ query }}" placeholder="Поиск по фамилии..." 
+               style="padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; width: 250px;">
+        <button type="submit" class="btn-main" style="padding: 10px 20px;">Найти</button>
+    </form>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+    {% for student in students %}
+        <a href="{% url 'student_detail' student.id %}" class="card" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 15px; transition: transform 0.2s;">
+            <div style="width: 50px; height: 50px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">
+                {{ student.last_name|slice:":1" }}
+            </div>
+            <div>
+                <div style="font-weight: 600; font-size: 1.1rem;">{{ student.get_full_name }}</div>
+                <div style="font-size: 0.85rem; color: #64748b;">Уроков проведено: {{ student.lessons_student.count }}</div>
+            </div>
+        </a>
+    {% empty %}
+        <p style="color: #64748b;">Ученики не найдены.</p>
+    {% endfor %}
+</div>
+
+<style>
+    .card { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
+    .card:hover { transform: translateY(-3px); border-color: #4f46e5; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+</style>
+{% endblock %}

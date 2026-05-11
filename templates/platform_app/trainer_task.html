@@ -5,6 +5,10 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <style>
+    @media (max-width: 480px) {
+    .task-card { padding: 20px; margin: 10px; }
+    .task-text { font-size: 1.1rem; }
+    }
     .task-card { max-width: 800px; margin: 40px auto; background: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     .topic-tag { background: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
     .task-text { font-size: 1.25rem; line-height: 1.7; margin: 30px 0; color: #1e293b; }
@@ -64,5 +68,8 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$', right: '$', display: false}]});"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+]});"></script>
 {% endblock %}
