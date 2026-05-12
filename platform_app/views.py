@@ -1,13 +1,18 @@
-import random
+from .forms import StudentCreateForm
 from django.shortcuts import render
 from django.contrib.auth import logout
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from .models import Lesson, Homework, Topic, Task
 from users.models import User
 from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q, Count
+from django.http import JsonResponse
+import json
 
 
 def index(request):
@@ -20,52 +25,189 @@ def logout_view(request):
     return redirect('index')
 
 
+
 @login_required
 def dashboard(request):
-    # Получаем уроки текущего пользователя (и как учителя, и как ученика)
-    if request.user.is_teacher:
-            now = timezone.now()
-            # Получаем все будущие уроки учителя
-            all_upcoming = Lesson.objects.select_related('student', 'topic').filter(
-                teacher=request.user, 
-                start_time__gte=now - timezone.timedelta(minutes=60)
-            ).order_by('start_time')
-
-            all_upcoming = list(all_upcoming) # Превращаем QuerySet в список, если данных немного
-            next_lesson = all_upcoming[0] if all_upcoming else None
-            other_lessons = all_upcoming[1:]
-
-            return render(request, 'platform_app/teacher_dashboard.html', {
-                'next_lesson': next_lesson,
-                'other_lessons': other_lessons,
-            })
-    else:
-         # Логика для ученика
+    if not request.user.is_teacher:
         lessons = Lesson.objects.filter(student=request.user).order_by('start_time')
-        topics = Topic.objects.all()
+        return render(request, 'platform_app/student_dashboard.html', {'lessons': lessons})
 
-        return render(request, 'platform_app/student_dashboard.html', {
-            'lessons': lessons,
-            'topics': topics
+    now = timezone.now()
+    base_query = Lesson.objects.select_related('student', 'topic').filter(teacher=request.user)
+
+    # 1. Все уроки
+    all_lessons = base_query.order_by('-start_time')
+
+    # 2. Предстоящие
+    upcoming_all = list(base_query.filter(
+        status=Lesson.Status.PLANNED, 
+        start_time__gte=now - timezone.timedelta(minutes=60)
+    ).order_by('start_time'))
+    
+    next_lesson = upcoming_all[0] if upcoming_all else None
+    upcoming_lessons = upcoming_all[1:] if upcoming_all else []
+
+    # 3. Проведенные
+    completed_lessons = base_query.filter(status=Lesson.Status.COMPLETED).order_by('-start_time')
+
+    # 4. Отмененные
+    cancelled_lessons = base_query.filter(status=Lesson.Status.CANCELLED).order_by('-start_time')
+
+    return render(request, 'platform_app/teacher_dashboard.html', {
+        'all_lessons': all_lessons,
+        'next_lesson': next_lesson,
+        'upcoming_lessons': upcoming_lessons,
+        'completed_lessons': completed_lessons,
+        'cancelled_lessons': cancelled_lessons,
+    })
+
+@login_required
+def trainer_list(request):
+    """Главная страница тренажера: подгружает предметы и темы"""
+    subjects = Topic.objects.values_list('subject', flat=True).distinct()
+    
+    current_subject = request.GET.get('subject')
+    if not current_subject and subjects:
+        current_subject = subjects[0]
+        
+    topics = Topic.objects.filter(subject=current_subject).order_by('name')
+    
+    return render(request, 'platform_app/trainer_list.html', {
+        'subjects': subjects,
+        'current_subject': current_subject,
+        'topics': topics
+    })
+
+@login_required
+def get_tasks_api(request, topic_id):
+    """API: Отдает по 15 задач для бесконечного скролла"""
+    page_number = request.GET.get('page', 1)
+    tasks_queryset = Task.objects.filter(topic_id=topic_id).order_by('id')
+    
+    paginator = Paginator(tasks_queryset, 15)
+    page_obj = paginator.get_page(page_number)
+    
+    tasks_data = [{'id': t.id, 'text': t.text} for t in page_obj]
+        
+    return JsonResponse({
+        'tasks': tasks_data,
+        'has_next': page_obj.has_next(),
+        'current_page': page_obj.number
+    })
+
+@login_required
+def check_task_api(request):
+    """API: Проверка ответа без перезагрузки"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task = get_object_or_404(Task, id=data.get('task_id'))
+        user_answer = data.get('answer', '').strip().lower()
+        is_correct = user_answer == task.answer.strip().lower()
+        return JsonResponse({
+            'is_correct': is_correct,
+            'correct_answer': task.answer,
+            'solution': task.solution # Показываем разбор только после проверки
         })
+
+@login_required
+def get_topics_api(request, subject_name):
+    """API: Отдает список тем для выбранного предмета"""
+    topics = Topic.objects.filter(subject=subject_name).values('id', 'name')
+    return JsonResponse({'topics': list(topics)})
+
+@login_required
+def lesson_detail(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Проверка доступа: только учитель этого урока или сам ученик
+    if request.user != lesson.teacher and request.user != lesson.student:
+        raise PermissionDenied
+
+    # Получаем или создаем объект домашки для этого урока
+    homework, created = Homework.objects.get_or_create(lesson=lesson)
+
+    if request.method == 'POST':
+        if request.user.is_teacher:
+            # Учитель обновляет тему, ссылку на материалы и описание ДЗ
+            lesson.status = request.POST.get('status', lesson.status)
+            lesson.material_link = request.POST.get('material_link', lesson.material_link)
+            lesson.save()
+            
+            homework.description = request.POST.get('description', homework.description)
+            homework.save()
+        else:
+            # Ученик отправляет отчет
+            homework.report = request.POST.get('report', homework.report)
+            homework.status = Homework.Status.REVIEW # Автоматически ставим "На проверке"
+            homework.save()
+            
+        return redirect('lesson_detail', lesson_id=lesson.id)
+
+    return render(request, 'platform_app/lesson_detail.html', {
+        'lesson': lesson,
+        'homework': homework
+    })
 
 @login_required
 def student_list(request):
     if not request.user.is_teacher:
         raise PermissionDenied
 
-    query = request.GET.get('q', '') # Получаем поисковый запрос
-    
-    # Находим всех уникальных учеников этого учителя
+    # Базовый QuerySet: только те, кто связан уроками с этим учителем
+    # Или вообще все ученики, если ты хочешь видеть всех зарегистрированных
     student_ids = Lesson.objects.filter(teacher=request.user).values_list('student_id', flat=True).distinct()
-    students = User.objects.filter(id__in=student_ids)
+    students = User.objects.filter(id__in=student_ids).prefetch_related('lessons_student__homework')
 
+    # Получаем параметры фильтрации
+    query = request.GET.get('q', '')
+    subject = request.GET.get('subject', '')
+    grade = request.GET.get('grade', '')
+    hw_status = request.GET.get('hw_status', '')
+
+    # 1. Поиск по имени/фамилии
     if query:
-        students = students.filter(last_name__icontains=query) # Поиск по фамилии
+        students = students.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query)
+        )
+
+    # 2. Фильтр по классу
+    if grade:
+        students = students.filter(grade=grade)
+
+    # 3. Фильтр по предмету (через связанные уроки)
+    if subject:
+        students = students.filter(lessons_student__topic__subject=subject)
+
+    if hw_status == 'pending':
+        students = students.filter(lessons_student__homework__status='REVIEW')
+    elif hw_status == 'missing':
+        students = students.filter(lessons_student__homework__status='TODO')
+    elif hw_status == 'fixing':
+        # Новое: Требует исправления
+        students = students.filter(lessons_student__homework__status='FIXING')
+    elif hw_status == 'done':
+        # Новое: Выполнено
+        students = students.filter(lessons_student__homework__status='DONE')
+
+    students = students.distinct()
+
+    # Для выпадающего списка предметов получим все уникальные предметы учителя
+    subjects = Lesson.objects.filter(teacher=request.user, topic__isnull=False)\
+        .values_list('topic__subject', flat=True).distinct()
+    
+    # Добавляем подсчет домашних заданий со статусом REVIEW (на проверке) и TODO (не начато)
+    students = students.annotate(
+        hw_pending_count=Count('lessons_student__homework', filter=Q(lessons_student__homework__status='REVIEW')),
+        hw_missing_count=Count('lessons_student__homework', filter=Q(lessons_student__homework__status='TODO'))
+    )
 
     return render(request, 'platform_app/student_list.html', {
         'students': students,
-        'query': query
+        'query': query,
+        'subjects': subjects,
+        'selected_subject': subject,
+        'selected_grade': grade,
+        'selected_hw': hw_status,
     })
 
 
@@ -75,6 +217,15 @@ def student_detail(request, student_id):
         raise PermissionDenied # Ограничение доступа
 
     student = get_object_or_404(User, id=student_id)
+    now = timezone.now()
+
+    overdue_lessons = Lesson.objects.filter(
+        student = student,
+        status  =Lesson.Status.PLANNED,
+        start_time__lte = now - timedelta(minutes=60) # Даем 1 час запаса
+    )
+    overdue_lessons.update(status=Lesson.Status.COMPLETED)
+
     # Все уроки этого ученика с текущим учителем
     lessons = Lesson.objects.filter(student=student, teacher=request.user).order_by('-start_time')
     homeworks = Homework.objects.filter(lesson__student=student, lesson__teacher=request.user)
@@ -160,3 +311,17 @@ def trainer_task(request, topic_id):
             'task': task,
         })
 
+@login_required
+def create_student(request):
+    if not request.user.is_teacher:
+        raise PermissionDenied
+    
+    if request.method == 'POST':
+        form = StudentCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('student_list')
+    else:
+        form = StudentCreateForm()
+    
+    return render(request, 'platform_app/create_student.html', {'form': form})

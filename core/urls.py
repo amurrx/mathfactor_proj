@@ -28,6 +28,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Все запросы, которые начинаются не с admin/, 
     # Django отправит в файл urls.py внутри приложения platform_app
+    path('auth/login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('', include('platform_app.urls')), 
     
     # Если у тебя есть авторизация в приложении users, добавь и его

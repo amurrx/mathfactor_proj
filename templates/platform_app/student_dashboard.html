@@ -22,42 +22,53 @@
     </div>
 
     <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
-        <!-- Левая колонка: Расписание -->
         <div class="card">
-            <h2>📅 Мое расписание</h2>
+            <h2 style="display: flex; align-items: center; gap: 10px; margin-top: 0;">
+                <i data-lucide="calendar" color="var(--primary)"></i> Мое расписание
+            </h2>
+            
             {% for lesson in lessons %}
-                <div class="lesson-card">
-                    <strong>{{ lesson.start_time|date:"d M, H:i" }}</strong> — {{ lesson.topic.name|default:"Разбор вопросов" }}
-                    <br>
-                    {% if lesson.material_link %}
-                        <a href="{{ lesson.material_link }}" target="_blank" style="font-size: 0.9rem; color: #4f46e5;">📖 Материалы к уроку</a>
-                    {% endif %}
-                    {% if lesson.homework %}
-                        <p style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
-                            📝 <strong>ДЗ:</strong> {{ lesson.homework.description }} 
-                            {% if lesson.homework.is_completed %} 
-                                <span style="color: #10b981;">(Выполнено ✅)</span> 
-                            {% else %} 
-                                <span style="color: #f59e0b;">(В работе ⏳)</span> 
-                            {% endif %}
-                        </p>
-                    {% endif %}
+                <!-- Группировка по датам, как у учителя -->
+                {% ifchanged lesson.start_time.date %}
+                    <div class="day-separator">{{ lesson.start_time|date:"d E, l" }}</div>
+                {% endifchanged %}
+
+                <div class="lesson-compact">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div class="time-badge">{{ lesson.start_time|date:"H:i" }}</div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text);">
+                                {{ lesson.topic.name|default:"Разбор вопросов" }}
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--gray);">
+                                Преподаватель: {{ lesson.teacher.get_full_name }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <!-- Краткий индикатор ДЗ -->
+                        {% if lesson.homework %}
+                            <div title="Статус ДЗ: {{ lesson.homework.get_status_display }}">
+                                {% if lesson.homework.status == 'DONE' %}
+                                    <i data-lucide="check-circle" color="#10b981" size="20"></i>
+                                {% elif lesson.homework.status == 'REVIEW' %}
+                                    <i data-lucide="clock" color="#f59e0b" size="20"></i>
+                                {% else %}
+                                    <i data-lucide="circle-dashed" color="#94a3b8" size="20"></i>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Кнопка перехода в детали урока -->
+                        <a href="{% url 'lesson_detail' lesson.id %}" class="btn-details">Детали →</a>
+                    </div>
                 </div>
             {% empty %}
-                <p>Уроков пока нет.</p>
-            {% endfor %}
-        </div>
-
-        <!-- Правая колонка: Тренажер -->
-        <div class="card">
-            <h2>🧠 Тренажер по темам</h2>
-            <p style="color: #64748b; margin-bottom: 15px;">Выбери тему для практики:</p>
-            {% for topic in topics %}
-                <a href="{% url 'trainer_task' topic.id %}" class="topic-link">
-                    {{ topic.name }}
-                </a>
-            {% empty %}
-                <p>Темы пока не добавлены.</p>
+                <div style="text-align: center; padding: 40px; color: var(--gray);">
+                    <i data-lucide="calendar-x" size="40" style="margin-bottom: 10px; opacity: 0.5;"></i>
+                    <p>Уроков пока не запланировано.</p>
+                </div>
             {% endfor %}
         </div>
     </div>

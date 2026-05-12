@@ -1,3 +1,4 @@
+{% load static %} 
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,148 +7,8 @@
     <title>{% block title %}MathFactor{% endblock %}</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg: #f8fafc;
-            --text: #1e293b;
-            --white: #ffffff;
-            --gray: #64748b;
-        }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            line-height: 1.5;
-        }
-        /* Шапка и меню */
-        nav {
-            background: var(--white);
-            padding: 0.75rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            text-decoration: none;
-            letter-spacing: -0.025em;
-        }
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-        .nav-links a {
-            text-decoration: none;
-            color: var(--gray);
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-        }
-        .nav-links a:hover { color: var(--primary); }
-        /* Основная кнопка */
-        .btn-main {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            padding: 0.8rem 1.8rem;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-main:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-
-        /* Адаптивность для сетки */
-        @media (max-width: 768px) {
-            .features {
-                grid-template-columns: 1fr; /* На мобилках карточки в один ряд */
-            }
-            .hero h1 {
-                font-size: 2.5rem; /* Уменьшаем заголовок на мобилках */
-            }
-            section[style*="display: flex"] {
-                flex-direction: column; /* Секция знакомства тоже в один столбец */
-            }
-        }
-        .btn-logout {
-            background: none;
-            color: #ef4444 !important;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: background 0.2s;
-        }
-        .btn-logout:hover { background: #fecaca; }
-
-        @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-        }
-        .container { animation: fadeIn 0.5s ease-out; }
-        
-        /* Стили навигации */
-        nav {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px); /* Эффект матового стекла */
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .logo-container { display: flex; align-items: center; gap: 8px; }
-
-        /* Контейнер */
-        .container {
-            max-width: 1100px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-        .alert {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-        }
-        /* Стили для ошибок */
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        /* Стили по умолчанию (info/success) */
-        .alert-info, .alert-success, .alert-default {
-            background: #e0e7ff;
-            color: #4338ca;
-        }
-
-        /* Футер */
-        footer {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--gray);
-            font-size: 0.9rem;
-        }
-    </style>
-
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -165,6 +26,7 @@
                 <a href="/admin/"><i data-lucide="settings"></i> Управление</a>
             {% else %}
                 <a href="{% url 'dashboard' %}"><i data-lucide="book-open"></i> Моё обучение</a>
+                <a href="{% url 'trainer_list' %}"><i data-lucide="brain"></i> Тренажер</a>
             {% endif %}
             <!-- Кнопка выхода (теперь через форму, чтобы не было ошибки 405) -->
             <form action="{% url 'logout' %}" method="post" style="display: inline;">
@@ -197,6 +59,23 @@
 </footer>
 <script>
   lucide.createIcons();
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Находим все формы на странице и выключаем автозаполнение
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.setAttribute('autocomplete', 'off');
+        });
+
+        // 2. Находим все текстовые инпуты (кроме паролей) и выключаем им подсказки
+        const inputs = document.querySelectorAll('input:not([type="password"])');
+        inputs.forEach(input => {
+            input.setAttribute('autocomplete', 'off');
+            // Дополнительный хак для Chrome:
+            input.setAttribute('role', 'presentation');
+        });
+    });
 </script>
 </body>
 </html>

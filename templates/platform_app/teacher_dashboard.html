@@ -2,115 +2,129 @@
 
 {% block title %}Расписание | MathFactor{% endblock %}
 
-{% block extra_css %}
-<style>
-    .card { background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 24px; }
-
-    @media (max-width: 900px) {
-    div[style*="display: grid"] {
-        grid-template-columns: 1fr !important; /* Столбиком на мобилках */
-    }
-    /* Ближайший урок */
-    .next-lesson-hero {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 20px;
-        margin-bottom: 40px;
-        position: relative;
-        overflow: hidden;
-    }
-    .next-lesson-hero .timer-big {
-        font-size: 1.2rem;
-        background: rgba(255,255,255,0.2);
-        padding: 8px 16px;
-        border-radius: 10px;
-        display: inline-block;
-        margin-top: 15px;
-    }
-
-    /* Разделитель дней */
-    .day-separator {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin: 30px 0 15px 10px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    .day-separator::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
-
-    /* Компактный урок в списке */
-    .lesson-compact {
-        background: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        border: 1px solid #e2e8f0;
-        transition: all 0.2s;
-    }
-    .lesson-compact:hover { border-color: #4f46e5; transform: translateX(5px); }
-    
-    .time-badge { font-weight: 700; font-size: 1.1rem; color: #1e293b; min-width: 70px; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto;">
+<div style="max-width: 800px; margin: 0 auto; padding-bottom: 50px;">
     
-    <section>
-        <!-- БЛИЖАЙШИЙ УРОК -->
-        {% if next_lesson %}
-            <h2 style="margin-bottom: 20px;">Ближайшее занятие</h2>
-            <div class="next-lesson-hero">
-                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px;">СЕГОДНЯ, {{ next_lesson.start_time|date:"H:i" }}</div>
-                <h1 style="margin: 0; color: white;">{{ next_lesson.student.get_full_name }}</h1>
-                <div style="font-size: 1.1rem; opacity: 0.9; margin-top: 5px;">Тема: {{ next_lesson.topic.name|default:"Разбор вопросов" }}</div>
-                <div class="timer-big">
-                    <i data-lucide="clock" size="18" style="vertical-align: middle;"></i> 
-                    До начала: {{ next_lesson.countdown_text }}
-                </div>
-                <i data-lucide="graduation-cap" style="position: absolute; right: -20px; bottom: -20px; width: 150px; height: 150px; opacity: 0.1; color: white;"></i>
+    <!-- ТЕПЕРЬ БЛИЖАЙШЕЕ ЗАНЯТИЕ ВСЕГДА СВЕРХУ -->
+    {% if next_lesson %}
+        <h2 style="margin-bottom: 20px; font-size: 1.5rem;">Ближайшее занятие</h2>
+        <div class="next-lesson-hero">
+            <div style="font-size: 0.9rem; opacity: 0.8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                СЕГОДНЯ, {{ next_lesson.start_time|date:"H:i" }}
             </div>
-        {% endif %}
+            <h1>{{ next_lesson.student.get_full_name }}</h1>
+            <div style="font-size: 1.2rem; opacity: 0.9;">Тема: {{ next_lesson.topic.name|default:"Разбор вопросов" }}</div>
+            
+            <div class="timer-big">
+                <i data-lucide="clock" size="18"></i> 
+                До начала: {{ next_lesson.countdown_text }}
+            </div>
+            <a href="{% url 'lesson_detail' next_lesson.id %}" class="btn-details" style="color: #ffffff;">Детали →</a>
+            <!-- Иконка шапочки на фоне -->
+            <i data-lucide="graduation-cap" class="hero-icon-bg"></i>
+        </div>
+    {% endif %}
 
-        <!-- ОСТАЛЬНОЕ РАСПИСАНИЕ -->
-        <h2 style="margin-bottom: 20px;">Предстоящие уроки</h2>
-        
-        {% if other_lessons %}
-            {% for lesson in other_lessons %}
-                <!-- Группировка по дням (магия Django template tag 'ifchanged') -->
-                {% ifchanged lesson.start_time.date %}
-                    <div class="day-separator">
-                        {{ lesson.start_time|date:"d E, l" }}
-                    </div>
-                {% endifchanged %}
+    <!-- ПАНЕЛЬ ВКЛАДОК  -->
+    <div class="tabs-container" style="margin-top: 40px;">
+        <button class="tab-btn active" onclick="switchTab(event, 'upcoming-tab')">Предстоящие</button>
+        <button class="tab-btn" onclick="switchTab(event, 'completed-tab')">Проведенные</button>
+        <button class="tab-btn" onclick="switchTab(event, 'cancelled-tab')">Отмененные</button>
+        <button class="tab-btn" onclick="switchTab(event, 'all-tab')">Все уроки</button> 
+    </div>
 
-                <div class="lesson-compact">
-                    <div style="display: flex; align-items: center; gap: 20px;">
-                        <div class="time-badge">{{ lesson.start_time|date:"H:i" }}</div>
-                        <div>
-                            <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
-                            <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name|default:"Тема не указана" }}</div>
-                        </div>
+    <!-- 1. КОНТЕНТ ВКЛАДКИ "ВСЕ УРОКИ"  -->
+    <div id="all-tab" class="tab-content" style="display: none;">
+        <h2 style="margin-bottom: 20px; font-size: 1.3rem;">Полная история занятий</h2>
+        {% for lesson in all_lessons %}
+            <div class="lesson-compact">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="time-badge">{{ lesson.start_time|date:"d.m" }}</div>
+                    <div>
+                        <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
+                        <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name|default:"Разбор" }}</div>
                     </div>
-                    <a href="{% url 'student_detail' lesson.student.id %}" style="color: #4f46e5; text-decoration: none; font-size: 0.9rem; font-weight: 600;">Детали →</a>
                 </div>
-            {% endfor %}
-        {% else %}
-            {% if not next_lesson %}
-                <div class="card" style="text-align: center; color: #64748b;">
-                    <i data-lucide="calendar-x" size="40" style="margin-bottom: 10px;"></i>
-                    <p>На ближайшее время уроков нет.</p>
+                
+                <!-- Отображение статуса текстом с цветом -->
+                <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">
+                    {% if lesson.status == 'PLANNED' %}
+                        <span style="color: #4f46e5;">Запланирован</span>
+                    {% elif lesson.status == 'COMPLETED' %}
+                        <span style="color: #10b981;">Проведен</span>
+                    {% elif lesson.status == 'CANCELLED' %}
+                        <span style="color: #ef4444;">Отменен</span>
+                    {% elif lesson.status == 'MISSED' %}
+                        <span style="color: #f59e0b;">Пропущен</span>
+                    {% endif %}
                 </div>
-            {% endif %}
-        {% endif %}
-    </section>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- 2. КОНТЕНТ ВКЛАДКИ "ПРЕДСТОЯЩИЕ" -->
+    <div id="upcoming-tab" class="tab-content">
+        <h2 style="margin-bottom: 20px; font-size: 1.3rem;">Список планов</h2>
+        {% for lesson in upcoming_lessons %}
+            {% ifchanged lesson.start_time.date %}
+                <div class="day-separator">{{ lesson.start_time|date:"d E, l" }}</div>
+            {% endifchanged %}
+            <div class="lesson-compact">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="time-badge">{{ lesson.start_time|date:"H:i" }}</div>
+                    <div>
+                        <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
+                        <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name|default:"Тема не указана" }}</div>
+                    </div>
+                </div>
+                <a href="{% url 'lesson_detail' lesson.id %}" class="btn-details">Детали →</a>
+            </div>
+        {% empty %}
+            <p style="color: #94a3b8; text-align: center; margin-top: 40px;">Больше уроков не запланировано</p>
+        {% endfor %}
+    </div>
+
+    <!-- 3. КОНТЕНТ ВКЛАДКИ "ПРОВЕДЕННЫЕ" -->
+    <div id="completed-tab" class="tab-content" style="display: none;">
+        <h2 style="margin-bottom: 20px; font-size: 1.3rem;">История проведенных</h2>
+        {% for lesson in completed_lessons %}
+            <div class="lesson-compact">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="time-badge" style="color: #10b981;">{{ lesson.start_time|date:"d.m" }}</div>
+                    <div>
+                        <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
+                        <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name }}</div>
+                    </div>
+                </div>
+                <span style="color: #10b981; font-size: 0.85rem; font-weight: 700;">Выполнено</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- 4. КОНТЕНТ ВКЛАДКИ "ОТМЕНЕННЫЕ" -->
+    <div id="cancelled-tab" class="tab-content" style="display: none;">
+        <h2 style="margin-bottom: 20px; font-size: 1.3rem;">Отмененные занятия</h2>
+        {% for lesson in cancelled_lessons %}
+            <div class="lesson-compact" style="opacity: 0.7;">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="time-badge" style="color: #ef4444;">{{ lesson.start_time|date:"d.m" }}</div>
+                    <div>
+                        <div style="font-weight: 600;">{{ lesson.student.get_full_name }}</div>
+                        <div style="font-size: 0.85rem; color: #64748b;">{{ lesson.topic.name }}</div>
+                    </div>
+                </div>
+                <span style="color: #ef4444; font-size: 0.85rem; font-weight: 700;">Отменено</span>
+            </div>
+        {% endfor %}
+    </div>
 </div>
+
+<script>
+function switchTab(event, tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).style.display = 'block';
+    event.currentTarget.classList.add('active');
+}
+</script>
 {% endblock %}

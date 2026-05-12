@@ -82,12 +82,22 @@
                         <a href="{{ lesson.material_link }}" target="_blank" style="color: #4f46e5; font-size: 0.8rem;">📂 Материалы</a>
                     {% endif %}
                 </td>
-                <td>
-                    <span class="badge status-{{ lesson.status }}">{{ lesson.get_status_display }}</span>
-                    <div style="margin-top: 8px;">
-                        <a href="{% url 'update_lesson_status' lesson.id 'COMPLETED' %}" class="action-btn">✅</a>
-                        <a href="{% url 'update_lesson_status' lesson.id 'MISSED' %}" class="action-btn">❌</a>
-                    </div>
+                <td class="px-4 py-3">
+                    {% with c_status=lesson.current_status %}
+                        {% if c_status == "ONGOING" %}
+                            <span class="badge badge-ongoing">● Идет сейчас</span>
+                        {% elif c_status == "NEEDS_CONFIRMATION" %}
+                            <span class="badge badge-warning">Ожидает отметки</span>
+                            <div style="margin-top: 8px; display: flex; gap: 5px;">
+                                <a href="{% url 'update_lesson_status' lesson.id 'COMPLETED' %}" class="btn-micro-success">✓</a>
+                                <a href="{% url 'update_lesson_status' lesson.id 'MISSED' %}" class="btn-micro-danger">×</a>
+                            </div>
+                        {% else %}
+                            <span class="badge badge-{{ lesson.status|lower }}">
+                                {{ lesson.get_status_display }}
+                            </span>
+                        {% endif %}
+                    {% endwith %}
                 </td>
                 <td>
                     {% if lesson.homework %}

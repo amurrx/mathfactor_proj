@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import User
 from django.utils import timezone
+from datetime import timedelta
 
 class Topic(models.Model):
     """Темы для тренажера и уроков"""
@@ -72,7 +73,30 @@ class Lesson(models.Model):
             return f"{days} дн. {hours} ч."
         if hours > 0:
             return f"{hours} ч. {minutes} мин."
-        return f"{minutes} мин." # Округляет вниз, 
+        return f"{minutes} мин." # Округляет вниз
+    
+    duration = models.PositiveIntegerField(default=60, verbose_name="Длительность (мин)")
+
+    class Status(models.TextChoices):
+        PLANNED = 'PLANNED', 'Запланировано'
+        ONGOING = 'ONGOING', 'Идет сейчас' # Добавим новый виртуальный статус
+        COMPLETED = 'COMPLETED', 'Проведено'
+        CANCELLED = 'CANCELLED', 'Отменено'
+        MISSED = 'MISSED', 'Пропущено'
+
+    @property
+    def current_status(self):
+        """Возвращает актуальный статус с учетом времени"""
+        now = timezone.now()
+        end_time = self.start_time + timedelta(minutes=self.duration)
+
+        if self.status == self.Status.PLANNED:
+            if self.start_time <= now <= end_time:
+                return "ONGOING" # Идет сейчас
+            elif now > end_time:
+                return "NEEDS_CONFIRMATION" # Отработал, но не отмечен
+        
+        return self.status
 
     def __str__(self):
         return f"{self.student.last_name} - {self.start_time.strftime('%d.%m %H:%M')}"

@@ -22,6 +22,8 @@ class User(AbstractUser):
         db_index=True
         )
     
+    grade = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Класс")
+
     phone_regex = RegexValidator(
         regex=r'^(\+7|8)\d{10}$',
         message="Номер телефона должен быть в формате: '+79999999999'."

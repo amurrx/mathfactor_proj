@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}Тренажер заданий | MathFactor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .trainer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        min-height: 80vh;
+    }
+
+    /* 1. ШАПКА И ТАБЫ (Центрированные) */
+    .trainer-header {
+        text-align: center;
+        margin-bottom: 50px;
+    }
+
+    .subject-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 60px;
+        border-bottom: 2px solid #e2e8f0;
+        margin-top: 30px;
+    }
+
+    .sub-tab {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-weight: 800;
+        font-size: 1.2rem;
+        padding: 15px 10px;
+        cursor: pointer;
+        position: relative;
+        font-family: 'Inter', sans-serif;
+        transition: color 0.3s ease;
+    }
+
+    .sub-tab:hover { color: #4f46e5; }
+
+    .sub-tab.active { color: #4f46e5; }
+
+    .sub-tab::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 50%;
+        width: 0;
+        height: 3px;
+        background: #4f46e5;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        transform: translateX(-50%);
+    }
+
+    .sub-tab.active::after {
+        width: 100%;
+    }
+
+    /* 2. СЕТКА 25 / 75 */
+    .trainer-layout {
+        display: grid;
+        grid-template-columns: 25% 75%;
+        gap: 40px;
+        align-items: start;
+    }
+
+    /* САЙДБАР (ЛЕВО) */
+    .sidebar-topics {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        padding: 24px;
+        position: sticky;
+        top: 100px;
+        min-height: 200px;
+    }
+
+    .sidebar-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 20px;
+    }
+
+    .topic-btn {
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        border: none;
+        background: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        color: #475569;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+        margin-bottom: 6px;
+        font-family: inherit;
+    }
+
+    .topic-btn:hover { background: #f8fafc; color: #4f46e5; }
+    .topic-btn.active { background: #e0e7ff; color: #4338ca; font-weight: 600; }
+
+    /* ЗАДАНИЯ (ПРАВО) */
+    .tasks-area { min-height: 400px; }
+    
+    .task-card {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        animation: slideUp 0.4s ease-out;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .task-id { font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 12px; }
+    .task-text { font-size: 1.2rem; line-height: 1.6; margin-bottom: 25px; color: #1e293b; }
+
+    .task-footer { display: flex; gap: 12px; }
+    .task-footer input { 
+        flex: 1; 
+        padding: 12px; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 10px; 
+        font-size: 1rem;
+        height: 44px;
+    }
+
+    .res-msg { margin-top: 15px; padding: 15px; border-radius: 12px; display: none; font-weight: 600; font-size: 0.95rem; }
+    .res-msg.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .res-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .solution-text { margin-top: 10px; font-weight: 400; font-size: 0.9rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 10px; }
+
+    .btn-load-more {
+        width: 100%;
+        padding: 16px;
+        background: #f1f5f9;
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        color: #64748b;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: all 0.2s;
+    }
+    .btn-load-more:hover { background: #e2e8f0; border-color: #94a3b8; color: #475569; }
+
+    .empty-placeholder { text-align: center; padding: 80px 0; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="trainer-container">
+    
+    <!-- 1. ЦЕНТРИРОВАННЫЕ ТАБЫ ПРЕДМЕТОВ -->
+    <div class="trainer-header">
+        <h1>Тренажер заданий</h1>
+        <div class="subject-tabs">
+            {% for sub in subjects %}
+                <button class="sub-tab {% if forloop.first %}active{% endif %}" 
+                        onclick="switchSubject('{{ sub }}', this)">
+                    {{ sub|upper }}
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="trainer-layout">
+        <!-- 2. ЛЕВО: ТЕМЫ (25%) -->
+        <aside class="sidebar-topics">
+            <div class="sidebar-title" id="side-title">Темы</div>
+            <div id="topics-list">
+                <!-- Сюда JS подгрузит темы -->
+            </div>
+        </aside>
+
+        <!-- 3. ПРАВО: ЗАДАНИЯ (75%) -->
+        <main class="tasks-area">
+            <div id="tasks-load-container">
+                <div class="empty-placeholder">
+                    <i data-lucide="layout-list" size="48"></i>
+                    <h3>Выберите тему слева</h3>
+                    <p>Список задач появится здесь</p>
+                </div>
+            </div>
+            
+            <button id="load-more-btn" class="btn-load-more" style="display: none;">
+                Показать еще 15 заданий
+            </button>
+        </main>
+    </div>
+</div>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" 
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$', right: '$', display: false}, {left: '$$', right: '$$', display: true}]});"></script>
+
+<script>
+let currentPage = 1;
+let activeTopicId = null;
+
+// Смена предмета (Математика / Информатика)
+async function switchSubject(subjectName, btn) {
+    document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Очистка
+    document.getElementById('tasks-load-container').innerHTML = `
+        <div class="empty-placeholder">
+            <i data-lucide="mouse-pointer-2" size="48"></i>
+            <h3>Тема не выбрана</h3>
+            <p>Выберите тему из списка слева для предмета ${subjectName}</p>
+        </div>`;
+    document.getElementById('load-more-btn').style.display = 'none';
+    document.getElementById('side-title').innerText = `Темы (${subjectName})`;
+
+    // Загрузка тем
+    const response = await fetch(`/api/get-topics/${subjectName}/`);
+    const data = await response.json();
+    
+    const topicsList = document.getElementById('topics-list');
+    topicsList.innerHTML = '';
+
+    data.topics.forEach(topic => {
+        const tBtn = document.createElement('button');
+        tBtn.className = 'topic-btn';
+        tBtn.innerHTML = `${topic.name} <i data-lucide="chevron-right" size="14"></i>`;
+        tBtn.onclick = (e) => selectTopic(tBtn, topic.id);
+        topicsList.appendChild(tBtn);
+    });
+    
+    lucide.createIcons();
+}
+
+// Выбор конкретной темы
+function selectTopic(btn, topicId) {
+    document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    currentPage = 1;
+    activeTopicId = topicId;
+    fetchTasks(topicId, false);
+}
+
+// Загрузка задач (15 штук)
+async function fetchTasks(topicId, append) {
+    const container = document.getElementById('tasks-load-container');
+    if (!append) container.innerHTML = '<p style="text-align:center; padding: 50px;">Загрузка списка задач...</p>';
+
+    const response = await fetch(`/api/get-tasks/${topicId}/?page=${currentPage}`);
+    const data = await response.json();
+
+    if (!append) container.innerHTML = '';
+
+    data.tasks.forEach(task => {
+        const html = `
+            <div class="task-card">
+                <div class="task-id">ЗАДАЧА #${task.id}</div>
+                <div class="task-text">${task.text}</div>
+                <div class="task-footer">
+                    <input type="text" placeholder="Введите ваш ответ..." id="input-${task.id}" autocomplete="off">
+                    <button class="btn-main" onclick="checkAnswer(${task.id})">Проверить</button>
+                </div>
+                <div id="res-${task.id}" class="res-msg"></div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+
+    renderMathInElement(container, {
+        delimiters: [{left: '$', right: '$', display: false}, {left: '$$', right: '$$', display: true}]
+    });
+    
+    document.getElementById('load-more-btn').style.display = data.has_next ? 'block' : 'none';
+    lucide.createIcons();
+}
+
+// Проверка ответа через API
+async function checkAnswer(taskId) {
+    const input = document.getElementById(`input-${taskId}`);
+    const ans = input.value;
+    
+    const response = await fetch('/api/check-task/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({task_id: taskId, answer: ans})
+    });
+    const data = await response.json();
+    
+    const resDiv = document.getElementById(`res-${taskId}`);
+    resDiv.style.display = 'block';
+    
+    if (data.is_correct) {
+        resDiv.className = 'res-msg success';
+        resDiv.innerHTML = '✅ Правильно! Молодец.';
+    } else {
+        resDiv.className = 'res-msg error';
+        resDiv.innerHTML = `❌ Ошибка. Правильный ответ: <b>${data.correct_answer}</b> 
+                            <div class="solution-text"><b>Разбор:</b> ${data.solution}</div>`;
+        renderMathInElement(resDiv);
+    }
+}
+
+// Подгрузка следующих 15 задач
+document.getElementById('load-more-btn').onclick = () => {
+    currentPage++;
+    fetchTasks(activeTopicId, true);
+};
+
+// Инициализация первого предмета при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+    const firstTab = document.querySelector('.sub-tab');
+    if (firstTab) firstTab.click();
+});
+</script>
+{% endblock %}

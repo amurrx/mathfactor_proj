@@ -1,35 +1,135 @@
 {% extends 'base.html' %}
 
-{% block title %}Мои ученики | MathFactor{% endblock %}
-
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <h1>Мои ученики</h1>
-    <form method="get" style="display: flex; gap: 10px;">
-        <input type="text" name="q" value="{{ query }}" placeholder="Поиск по фамилии..." 
-               style="padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; width: 250px;">
-        <button type="submit" class="btn-main" style="padding: 10px 20px;">Найти</button>
-    </form>
-</div>
+<div style="display: grid; grid-template-columns: 1fr 300px; gap: 30px; align-items: start;">
+    
+    <!-- ЛЕВАЯ ЧАСТЬ: Список учеников -->
+    <main>
+        <div style="margin-bottom: 20px;">
+            <h1 style="margin:0;">Ученики ({{ students.count }})</h1>
+        </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-    {% for student in students %}
-        <a href="{% url 'student_detail' student.id %}" class="card" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 15px; transition: transform 0.2s;">
-            <div style="width: 50px; height: 50px; background: #e0e7ff; color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">
-                {{ student.last_name|slice:":1" }}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+            {% for student in students %}
+                <div class="card student-card-pro">
+                    <div style="display: flex; gap: 15px;">
+                        <div class="avatar">{{ student.last_name|slice:":1" }}</div>
+                        <div>
+                            <h4 style="margin:0;">{{ student.get_full_name }}</h4>
+                            <span class="badge-grade">{{ student.grade|default:"?" }} класс</span>
+                            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                {% if student.hw_pending_count > 0 %}
+                                    <span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                                        🟡 Проверить: {{ student.hw_pending_count }}
+                                    </span>
+                                {% endif %}
+
+                                {% if student.hw_missing_count > 0 %}
+                                    <span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                                        🔴 Долги: {{ student.hw_missing_count }}
+                                    </span>
+                                {% endif %}
+                                
+                                {% if student.hw_pending_count == 0 and student.hw_missing_count == 0 %}
+                                    <span style="background: #f0fdf4; color: #166534; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+                                        ✅ Всё сдано
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Микро-статистика (опционально) -->
+                    <div style="margin-top: 15px; font-size: 0.85rem; color: #64748b;">
+                        {% with pending=student.lessons_student.all %}
+                            <!-- Здесь можно посчитать долги -->
+                        {% endwith %}
+                    </div>
+
+                    <div style="margin-top: 15px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                        <a href="{% url 'student_detail' student.id %}" class="btn-outline">Открыть профиль</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="card" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                    <p style="color: #64748b;">Никто не подходит под фильтры</p>
+                    <a href="{% url 'student_list' %}" style="color: var(--primary);">Сбросить всё</a>
+                </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- ПРАВАЯ ЧАСТЬ: Фильтры -->
+    <aside class="filter-panel">     
+        <form method="get">
+            <!-- Поиск по имени -->
+            <div class="filter-group">
+                <label>Поиск</label>
+                <input type="text" name="q" value="{{ query }}" placeholder="Имя или фамилия">
             </div>
-            <div>
-                <div style="font-weight: 600; font-size: 1.1rem;">{{ student.get_full_name }}</div>
-                <div style="font-size: 0.85rem; color: #64748b;">Уроков проведено: {{ student.lessons_student.count }}</div>
+
+            <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="filter" size="20"></i> Фильтры
+            </h3>
+            <!-- Предмет -->
+            <div class="filter-group">
+                <label>Предмет</label>
+                <select name="subject">
+                    <option value="">Все предметы</option>
+                    {% for sub in subjects %}
+                        <option value="{{ sub }}" {% if sub == selected_subject %}selected{% endif %}>{{ sub }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </a>
-    {% empty %}
-        <p style="color: #64748b;">Ученики не найдены.</p>
-    {% endfor %}
+
+            <!-- Класс -->
+            <div class="filter-group">
+                <label>Класс</label>
+                <select name="grade">
+                    <option value="">Любой</option>
+                    <option value="5" {% if selected_grade == '5' %}selected{% endif %}>5 класс</option>
+                    <option value="6" {% if selected_grade == '6' %}selected{% endif %}>6 класс</option>
+                    <option value="7" {% if selected_grade == '7' %}selected{% endif %}>7 класс</option>
+                    <option value="8" {% if selected_grade == '8' %}selected{% endif %}>8 класс</option>
+                    <option value="9" {% if selected_grade == '9' %}selected{% endif %}>9 класс</option>
+                    <option value="10" {% if selected_grade == '10' %}selected{% endif %}>10 класс</option>
+                    <option value="11" {% if selected_grade == '11' %}selected{% endif %}>11 класс</option>
+                </select>
+            </div>
+
+            <!-- Статус домашки -->
+            <div class="filter-group">
+                <label>Домашняя работа</label>
+                <select name="hw_status">
+                    <option value="" {% if not selected_hw %}selected{% endif %}>Все статусы</option>
+                    <option value="done" {% if selected_hw == 'done' %}selected{% endif %}>🟢 Выполнено</option>
+                    <option value="pending" {% if selected_hw == 'pending' %}selected{% endif %}>🟡 На проверке</option>
+                    <option value="missing" {% if selected_hw == 'missing' %}selected{% endif %}>🔴 Есть долги</option>
+                    <option value="fixing" {% if selected_hw == 'fixing' %}selected{% endif %}>🟠 Требует исправления</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-main" style="width: 100%; margin-top: 10px;">Применить</button>
+            <a href="{% url 'student_list' %}" class="btn-reset">Сбросить</a>
+        </form>
+    </aside>
 </div>
 
 <style>
-    .card { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
-    .card:hover { transform: translateY(-3px); border-color: #4f46e5; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+    .filter-panel { background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; position: sticky; top: 100px; }
+    .filter-group { margin-bottom: 15px; }
+    .filter-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 8px; }
+    .filter-group input, .filter-group select { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; }
+    
+    .radio-group { display: flex; flex-direction: column; gap: 8px; }
+    .radio-label { font-size: 0.9rem !important; font-weight: 400 !important; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+    .btn-reset { display: block; text-align: center; margin-top: 15px; font-size: 0.85rem; color: #94a3b8; text-decoration: none; }
+    
+    .student-card-pro { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
+    .avatar { width: 45px; height: 45px; background: #f1f5f9; color: #475569; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .badge-grade { display: inline-block; padding: 2px 8px; background: #f0fdf4; color: #166534; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-top: 4px; }
+    .btn-outline { display: block; text-align: center; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; text-decoration: none; color: #1e293b; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+    .btn-outline:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); }
 </style>
 {% endblock %}

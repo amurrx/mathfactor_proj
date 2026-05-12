@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Урок {{ lesson.start_time|date:"d.m" }} | MathFactor{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    
+    <!-- Хлебные крошки / Назад -->
+    <a href="{% url 'dashboard' %}" style="text-decoration: none; color: var(--gray); font-size: 0.9rem; display: flex; align-items: center; gap: 5px; margin-bottom: 20px;">
+        <i data-lucide="arrow-left" size="16"></i> Вернуться в расписание
+    </a>
+
+    <div class="card" style="margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <span class="badge badge-{{ lesson.status|lower }}">{{ lesson.get_status_display }}</span>
+                <h1 style="margin: 10px 0 5px 0;">{{ lesson.topic.name|default:"Тема не указана" }}</h1>
+                <p style="color: var(--gray); margin: 0;">
+                    <i data-lucide="calendar" size="14" style="vertical-align: middle;"></i> 
+                    {{ lesson.start_time|date:"d E (l), H:i" }}
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <p style="margin: 0; font-weight: 600;">{{ lesson.student.get_full_name }}</p>
+                <p style="margin: 0; font-size: 0.85rem; color: var(--gray);">Преподаватель: {{ lesson.teacher.get_full_name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        
+        <!-- ЛЕВАЯ КОЛОНКА: Материалы -->
+        <section>
+            <h3 style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="folder-open" color="var(--primary)"></i> Материалы урока
+            </h3>
+            <div class="card">
+                {% if user.is_teacher %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Ссылка на доску / материалы</label>
+                            <input type="text" name="material_link" value="{{ lesson.material_link }}" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label>Изменить статус урока</label>
+                            <select name="status">
+                                {% for val, label in lesson.Status.choices %}
+                                    <option value="{{ val }}" {% if lesson.status == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-main" style="width: 100%;">Сохранить изменения</button>
+                    </form>
+                {% else %}
+                    {% if lesson.material_link %}
+                        <p>Преподаватель прикрепил материалы к уроку:</p>
+                        <a href="{{ lesson.material_link }}" target="_blank" class="btn-main" style="display: block; text-align: center;">
+                            Открыть материалы <i data-lucide="external-link" size="16"></i>
+                        </a>
+                    {% else %}
+                        <p style="color: var(--gray); font-style: italic;">Материалы еще не добавлены.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- ПРАВАЯ КОЛОНКА: Домашнее задание -->
+        <section>
+            <h3 style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="pencil-line" color="#f59e0b"></i> Домашнее задание
+            </h3>
+            <div class="card" style="border-top: 4px solid #f59e0b;">
+                <div style="margin-bottom: 20px;">
+                    <span class="badge" style="background: #fef3c7; color: #92400e;">{{ homework.get_status_display }}</span>
+                </div>
+
+                {% if user.is_teacher %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Что нужно сделать</label>
+                            <textarea name="description" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">{{ homework.description }}</textarea>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--gray);">Отчет ученика: 
+                            <br><strong>{{ homework.report|default:"Еще не сдано" }}</strong>
+                        </p>
+                        <button type="submit" class="btn-main" style="width: 100%; background: #f59e0b;">Обновить ДЗ</button>
+                    </form>
+                {% else %}
+                    <div style="background: #fffbeb; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="margin: 0; white-space: pre-wrap;">{{ homework.description|default:"Задание будет добавлено позже." }}</p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Твой ответ (текст или ссылка на файл)</label>
+                            <textarea name="report" placeholder="Вставь ссылку или напиши решение..." style="width: 100%; height: 100px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">{{ homework.report }}</textarea>
+                        </div>
+                        <button type="submit" class="btn-main" style="width: 100%;">Сдать работу</button>
+                    </form>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
