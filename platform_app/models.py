@@ -52,6 +52,7 @@ class Lesson(models.Model):
     start_time = models.DateTimeField(verbose_name="Время начала")
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.PLANNED)
     material_link = models.FileField(blank=True, verbose_name="Ссылка на материалы")
+    meeting_link = models.URLField(blank=True, verbose_name="Ссылка на Zoom/Телемост")
 
     @property
     def countdown_text(self):
@@ -97,6 +98,18 @@ class Lesson(models.Model):
                 return "NEEDS_CONFIRMATION" # Отработал, но не отмечен
         
         return self.status
+    
+    @property
+    def is_ongoing(self):
+        """Идет ли урок прямо сейчас?"""
+        now = timezone.now()
+        # Урок идет, если время начала прошло, но час еще не кончился
+        return self.start_time <= now <= (self.start_time + timedelta(minutes=60))
+
+    @property
+    def is_overdue(self):
+        """Урок уже закончился, но статус еще 'Запланировано'?"""
+        return self.status == self.Status.PLANNED and timezone.now() > (self.start_time + timedelta(minutes=60))
 
     def __str__(self):
         return f"{self.student.last_name} - {self.start_time.strftime('%d.%m %H:%M')}"

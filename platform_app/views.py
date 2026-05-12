@@ -24,10 +24,24 @@ def logout_view(request):
     logout(request)
     return redirect('index')
 
-
+def sync_lesson_statuses(user):
+    """Обновляет статусы просроченных уроков для пользователя"""
+    now = timezone.now()
+    # Находим все запланированные уроки, которые закончились более 5 минут назад
+    overdue = Lesson.objects.filter(
+        status=Lesson.Status.PLANNED,
+        start_time__lte=now - timedelta(minutes=65) # 60 мин урока + 5 мин запас
+    )
+    if user.is_teacher:
+        overdue = overdue.filter(teacher=user)
+    else:
+        overdue = overdue.filter(student=user)
+    
+    overdue.update(status=Lesson.Status.COMPLETED)
 
 @login_required
 def dashboard(request):
+    sync_lesson_statuses(request.user)
     if not request.user.is_teacher:
         lessons = Lesson.objects.filter(student=request.user).order_by('start_time')
         return render(request, 'platform_app/student_dashboard.html', {'lessons': lessons})
@@ -118,7 +132,16 @@ def get_topics_api(request, subject_name):
 @login_required
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+    sync_lesson_statuses(request.user) # Обновляем перед показом
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    now = timezone.now()
+
+    # Кнопка активна за 15 минут до начала И всё время, пока идет урок (60 мин)
+    lesson_end_time = lesson.start_time + timedelta(minutes=60)
+    can_join = (lesson.start_time - timedelta(minutes=15)) <= now <= lesson_end_time
+    is_past = now > lesson_end_time
+
+
     # Проверка доступа: только учитель этого урока или сам ученик
     if request.user != lesson.teacher and request.user != lesson.student:
         raise PermissionDenied
@@ -144,9 +167,11 @@ def lesson_detail(request, lesson_id):
         return redirect('lesson_detail', lesson_id=lesson.id)
 
     return render(request, 'platform_app/lesson_detail.html', {
-        'lesson': lesson,
-        'homework': homework
-    })
+            'lesson': lesson,
+            'homework': homework,
+            'can_join': can_join,
+            'is_past': is_past,
+        })
 
 @login_required
 def student_list(request):
